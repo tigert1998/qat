@@ -60,7 +60,7 @@ class QuantizedOperator(nn.Module):
         return QuantizedTensor(q, s, z)
 
 
-class QuantizedConv2dBatchNorm2d(QuantizedOperator):
+class QuantizedConv2dBatchNorm2dReLU(QuantizedOperator):
     def __init__(
         self,
         in_channels,
@@ -87,13 +87,11 @@ class QuantizedConv2dBatchNorm2d(QuantizedOperator):
         assert self.conv2d.padding_mode == "zeros"
 
         self.activation = activation
-        assert self.activation in ["relu", "relu6", None]
+        assert self.activation in ["relu", None]
 
     def _apply_activation(self, output):
         if self.activation == "relu":
             return F.relu(output)
-        elif self.activation == "relu6":
-            return F.relu6(output)
         elif self.activation is None:
             return output
 
@@ -192,8 +190,8 @@ class QuantizedAdd(QuantizedOperator):
 
     def _rescale_x(self, x: QuantizedTensor, y: QuantizedTensor):
         s = y.s
-        q = (x.s / y.s) * x.q
-        z = (x.s / y.s) * x.z
+        q = ((x.s / y.s) * (x.q.to(torch.int16) - x.z)).round().to(torch.int16)
+        z = torch.zeros_like(q)
         return QuantizedTensor(q, s, z)
 
     def forward(self, x, y):
@@ -216,3 +214,54 @@ class QuantizedAdd(QuantizedOperator):
             output = x + y
             self.update_min_max_stats(output)
             return output
+
+
+class QuantizedAdaptiveAvgPool2d(QuantizedOperator):
+    def __init__(self, output_size) -> None:
+        super().__init__(0.1, None)
+        self.output_size = output_size
+
+    def _activation_quantized_forward(self, input: QuantizedTensor) -> QuantizedTensor:
+        q = F.adaptive_avg_pool2d(input.q.to(torch.float32), self.output_size) \
+            .round().to(torch.int8)
+        quantized_simulated_output = QuantizedTensor(q, input.s, input.z)
+        real_output = F.adaptive_avg_pool2d(
+            input.dequantize(), self.output_size)
+        quantized_simulated_output.r = real_output - \
+            (real_output - quantized_simulated_output.dequantize()).detach()
+        return quantized_simulated_output
+
+    def forward(self, input):
+        if self.activation_quantization:
+            assert isinstance(input, QuantizedTensor)
+            return self._activation_quantized_forward(input)
+        else:
+            assert isinstance(input, torch.Tensor)
+            return F.adaptive_avg_pool2d(input, self.output_size)
+
+
+class QuantizedMaxPool2d(QuantizedOperator):
+    def __init__(self, kernel_size, stride=None, padding=0, dilation=1):
+        super().__init__(0.1, None)
+        self.kernel_size = kernel_size
+        self.stride = stride
+        self.padding = padding
+        self.dilation = dilation
+
+    def _activation_quantized_forward(self, input: QuantizedTensor) -> QuantizedTensor:
+        q = F.max_pool2d(input.q.to(torch.float32), self.kernel_size, self.stride,
+                         self.padding, self.dilation).round().to(torch.int8)
+        quantized_simulated_output = QuantizedTensor(q, input.s, input.z)
+        real_output = F.max_pool2d(
+            input.dequantize(), self.kernel_size, self.stride, self.padding, self.dilation)
+        quantized_simulated_output.r = real_output - \
+            (real_output - quantized_simulated_output.dequantize()).detach()
+        return quantized_simulated_output
+
+    def forward(self, input):
+        if self.activation_quantization:
+            assert isinstance(input, QuantizedTensor)
+            return self._activation_quantized_forward(input)
+        else:
+            assert isinstance(input, torch.Tensor)
+            return F.max_pool2d(input, self.kernel_size, self.stride, self.padding, self.dilation)
