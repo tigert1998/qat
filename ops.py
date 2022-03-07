@@ -122,7 +122,7 @@ class QuantizedConv2dBatchNorm2dReLU(QuantizedOperator):
         a = weight_reshaped.min(dim=1).values
         b = weight_reshaped.max(dim=1).values
 
-        z = (127 - b * 254 / (b - a)).round().to(torch.int8)
+        z = torch.zeros_like(a).to(torch.int8)
         s = b / (127 - z)
         z = z.reshape(z.shape[0], 1, 1, 1)
         s = s.reshape(s.shape[0], 1, 1, 1)
@@ -265,3 +265,29 @@ class QuantizedMaxPool2d(QuantizedOperator):
         else:
             assert isinstance(input, torch.Tensor)
             return F.max_pool2d(input, self.kernel_size, self.stride, self.padding, self.dilation)
+
+
+class QuantizedSoftmax(QuantizedOperator):
+    def __init__(self, dim: int) -> None:
+        super().__init__(0.1, None)
+        self.dim = dim
+
+    def _activation_quantized_forward(self, input: QuantizedTensor) -> QuantizedTensor:
+        # In the inference engine, this is done by fix-point arithmetic.
+        simulated_output = F.softmax(input.dequantize(), dim=self.dim)
+        s = torch.tensor(1.0 / 256.0).to(simulated_output.device)
+        z = torch.tensor(-128).to(simulated_output.device)
+        q = (simulated_output / s + z).round().to(torch.int8)
+        quantized_simulated_output = QuantizedTensor(q, s, z)
+        r = simulated_output - (simulated_output -
+                                quantized_simulated_output.dequantize())
+        quantized_simulated_output.r = r
+        return quantized_simulated_output
+
+    def forward(self, input):
+        if self.activation_quantization:
+            assert isinstance(input, QuantizedTensor)
+            return self._activation_quantized_forward(input)
+        else:
+            assert isinstance(input, torch.Tensor)
+            return F.softmax(input, dim=self.dim)
