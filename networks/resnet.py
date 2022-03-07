@@ -2,9 +2,10 @@
 
 from typing import Optional, Callable, Type, List, Union, Any
 
+import torch
 import torch.nn as nn
 
-from ops import Quantize, QuantizedAdaptiveAvgPool2d, QuantizedConv2dBatchNorm2dReLU, QuantizedFlatten, QuantizedLinear, QuantizedMaxPool2d, QuantizedReLU, QuantizedAdd
+from ops import Quantize, QuantizedAdaptiveAvgPool2d, QuantizedConv2dBatchNorm2dReLU, QuantizedFlatten, QuantizedLinear, QuantizedMaxPool2d, QuantizedReLU, QuantizedAdd, QuantizedTensor
 
 
 def conv3x3(in_planes: int, out_planes: int, stride: int = 1, groups: int = 1, dilation: int = 1, activation=None):
@@ -224,6 +225,12 @@ class ResNet(nn.Module):
 
         return nn.Sequential(*layers)
 
+    def _dequantize(self, x):
+        if isinstance(x, torch.Tensor):
+            return x
+        elif isinstance(x, QuantizedTensor):
+            return x.dequantize()
+
     def _forward_impl(self, x):
         # See note [TorchScript super()]
         x = self.quantize(x)
@@ -238,6 +245,7 @@ class ResNet(nn.Module):
         x = self.avgpool(x)
         x = self.flatten(x)
         x = self.fc(x)
+        x = self._dequantize(x)
 
         return x
 
