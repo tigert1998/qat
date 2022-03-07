@@ -61,6 +61,20 @@ class QuantizedOperator(nn.Module):
         return QuantizedTensor(q, s, z)
 
 
+class Quantize(QuantizedOperator):
+    def __init__(self, momentum=0.1, device=None) -> None:
+        super().__init__(momentum, device)
+
+    def forward(self, input: torch.Tensor) -> QuantizedTensor:
+        if self.activation_quantization:
+            self.update_min_max_stats(input)
+            output = self.quantize_output(input)
+            return output
+        else:
+            self.update_min_max_stats(input)
+            return input
+
+
 class QuantizedConv2dBatchNorm2dReLU(QuantizedOperator):
     def __init__(
         self,
@@ -169,7 +183,7 @@ class QuantizedConv2dBatchNorm2dReLU(QuantizedOperator):
         # quantize weight but not bias since bias quantization relies on a quantized input tensor
         quantized_fused_weight = self._quantize_weight(fused_weight)
         simulated_output = self._apply_activation(F.conv2d(
-            input.dequantize(), quantized_fused_weight.dequantize(),
+            input, quantized_fused_weight.dequantize(),
             fused_bias, self.conv2d.stride,
             self.conv2d.padding, self.conv2d.dilation, self.conv2d.groups
         ))
