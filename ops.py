@@ -294,3 +294,27 @@ class QuantizedSoftmax(QuantizedOperator):
         else:
             assert isinstance(input, torch.Tensor)
             return F.softmax(input, dim=self.dim)
+
+
+class QuantizedReLU(QuantizedOperator):
+    def __init__(self, momentum=0.1, device=None) -> None:
+        super().__init__(momentum, device)
+
+    def _activation_quantized_forward(self, input: QuantizedTensor) -> QuantizedTensor:
+        simulated_output = F.relu(input.dequantize())
+        self.update_min_max_stats(simulated_output)
+        quantized_simulated_output = self.quantize_output(simulated_output)
+        r = simulated_output - (simulated_output -
+                                quantized_simulated_output.dequantize())
+        quantized_simulated_output.r = r
+        return quantized_simulated_output
+
+    def forward(self, input):
+        if self.activation_quantization:
+            assert isinstance(input, QuantizedTensor)
+            return self._activation_quantized_forward(input)
+        else:
+            assert isinstance(input, torch.Tensor)
+            output = F.relu(input)
+            self.update_min_max_stats(output)
+            return output
