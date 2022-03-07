@@ -52,9 +52,10 @@ class QuantizedOperator(nn.Module):
         self.num_batches_tracked.data.copy_(self.num_batches_tracked + 1)
 
     def quantize_output(self, output: torch.Tensor):
+        assert self.num_batches_tracked >= 1
         z = (127 - self.running_max * 255 /
              (self.running_max - self.running_min)).round().to(torch.int8)
-        s = self.running_max / (127 - z)
+        s = self.running_max / (127 - z.to(torch.float32))
         q = torch.maximum(torch.minimum(
             output / s + z, torch.tensor(127)), torch.tensor(-128)).round().to(torch.int8)
         return QuantizedTensor(q, s, z)
@@ -123,7 +124,7 @@ class QuantizedConv2dBatchNorm2dReLU(QuantizedOperator):
         b = weight_reshaped.max(dim=1).values
 
         z = torch.zeros_like(a).to(torch.int8)
-        s = b / (127 - z)
+        s = b / (127 - z.to(torch.float32))
         z = z.reshape(z.shape[0], 1, 1, 1)
         s = s.reshape(s.shape[0], 1, 1, 1)
 
