@@ -318,3 +318,74 @@ class QuantizedReLU(QuantizedOperator):
             output = F.relu(input)
             self.update_min_max_stats(output)
             return output
+
+
+class QuantizedLinear(QuantizedOperator):
+    def __init__(self, in_features: int, out_features: int, bias: bool = True, momentum=0.1, device=None) -> None:
+        super().__init__(momentum, device)
+        self.linear = nn.Linear(in_features, out_features, bias, device)
+
+    def _quantize_weight(self, weight: torch.Tensor):
+        # Quantize weight to -127 ~ 127. Note that -128 is excluded.
+        a = weight.min()
+        b = weight.max()
+
+        z = torch.zeros_like(a).to(torch.int8)
+        s = b / (127 - z.to(torch.float32))
+
+        q = torch.maximum(torch.minimum(
+            weight / s + z, torch.tensor(127)), torch.tensor(-127)).round().to(torch.int8)
+        return QuantizedTensor(q, s, z)
+
+    def _quantize_bias(self, quantized_input: QuantizedTensor, quantized_weight: QuantizedTensor, bias: torch.Tensor):
+        s = quantized_weight.s * quantized_input.s
+        z = torch.zeros_like(s).to(torch.int32)
+        q = (bias / s).round().to(torch.int32)
+        return QuantizedTensor(q, s, z)
+
+    def _activation_quantized_forward(self, input: QuantizedTensor) -> QuantizedTensor:
+        quantized_weight = self._quantize_weight(self.linear.weight)
+
+        if self.linear.bias is not None:
+            quantized_bias = self._quantize_bias(
+                input, quantized_weight, self.linear.bias)
+            simulated_output = F.linear(input.dequantize(), quantized_weight.dequantize(),
+                                        quantized_bias.dequantize())
+        else:
+            simulated_output = F.linear(
+                input.dequantize(), quantized_weight.dequantize(), None)
+
+        self.update_min_max_stats(simulated_output)
+        quantized_simulated_output = self.quantize_output(simulated_output)
+
+        real_output = self.linear(input.dequantize())
+        quantized_simulated_output.r = real_output - \
+            (real_output - quantized_simulated_output.dequantize())
+        return quantized_simulated_output
+
+    def forward(self, input):
+        if self.activation_quantization:
+            assert isinstance(input, QuantizedTensor)
+            return self._activation_quantized_forward(input)
+        else:
+            assert isinstance(input, torch.Tensor)
+            output = self.linear(input)
+            self.update_min_max_stats(output)
+            return output
+
+
+class QuantizedFlatten(QuantizedOperator):
+    def __init__(self, start_dim, end_dim=-1) -> None:
+        super().__init__(0.1, None)
+        self.start_dim = start_dim
+        self.end_dim = end_dim
+
+    def forward(self, input):
+        if self.activation_quantization:
+            assert isinstance(input, QuantizedTensor)
+            q = torch.flatten(input.q, self.start_dim, self.end_dim)
+            r = torch.flatten(input.r, self.start_dim, self.end_dim)
+            return QuantizedTensor(q, input.s, input.z, r)
+        else:
+            assert isinstance(input, torch.Tensor)
+            return torch.flatten(input, self.start_dim, self.end_dim)
