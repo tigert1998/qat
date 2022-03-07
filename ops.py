@@ -293,11 +293,11 @@ class QuantizedSoftmax(QuantizedOperator):
         # In the inference engine, this is done by fix-point arithmetic.
         simulated_output = F.softmax(input.dequantize(), dim=self.dim)
         s = torch.tensor(1.0 / 256.0).to(simulated_output.device)
-        z = torch.tensor(-128).to(simulated_output.device)
+        z = torch.tensor(-128).to(torch.int8).to(simulated_output.device)
         q = (simulated_output / s + z).round().to(torch.int8)
         quantized_simulated_output = QuantizedTensor(q, s, z)
         r = simulated_output - (simulated_output -
-                                quantized_simulated_output.dequantize())
+                                quantized_simulated_output.dequantize()).detach()
         quantized_simulated_output.r = r
         return quantized_simulated_output
 
@@ -319,7 +319,7 @@ class QuantizedReLU(QuantizedOperator):
         self.update_min_max_stats(simulated_output)
         quantized_simulated_output = self.quantize_output(simulated_output)
         r = simulated_output - (simulated_output -
-                                quantized_simulated_output.dequantize())
+                                quantized_simulated_output.dequantize()).detach()
         quantized_simulated_output.r = r
         return quantized_simulated_output
 
@@ -374,7 +374,7 @@ class QuantizedLinear(QuantizedOperator):
 
         real_output = self.linear(input.dequantize())
         quantized_simulated_output.r = real_output - \
-            (real_output - quantized_simulated_output.dequantize())
+            (real_output - quantized_simulated_output.dequantize()).detach()
         return quantized_simulated_output
 
     def forward(self, input):
