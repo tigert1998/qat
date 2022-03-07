@@ -113,7 +113,9 @@ class QuantizedConv2dBatchNorm2dReLU(QuantizedOperator):
         sqrt_var = torch.sqrt(var + self.bn2d.eps)
         fused_weight = self.conv2d.weight * self.bn2d.weight.reshape(self.conv2d.out_channels, 1, 1, 1) / \
             sqrt_var.reshape(self.conv2d.out_channels, 1, 1, 1)
-        fused_bias = (self.conv2d.bias - mean) / sqrt_var * \
+        bias = torch.zeros_like(mean) \
+            if self.conv2d.bias is None else self.conv2d.bias
+        fused_bias = (bias - mean) / sqrt_var * \
             self.bn2d.weight + self.bn2d.bias
         return fused_weight, fused_bias
 
