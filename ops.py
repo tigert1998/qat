@@ -155,20 +155,21 @@ class QuantizedConv2dBatchNorm2dReLU(QuantizedOperator):
         return QuantizedTensor(q, s, z)
 
     def _activation_quantized_forward(self, input: QuantizedTensor) -> QuantizedTensor:
-        fused_weight, fused_bias = self._get_fused_weight_and_bias(
-            input.dequantize()
-        )
-        quantized_fused_weight = self._quantize_weight(fused_weight)
-        quantized_fused_bias = self._quantize_bias(
-            input, quantized_fused_weight, fused_bias)
-        simulated_output = self._apply_activation(F.conv2d(
-            input.dequantize(), quantized_fused_weight.dequantize(),
-            quantized_fused_bias.dequantize(), self.conv2d.stride,
-            self.conv2d.padding, self.conv2d.dilation, self.conv2d.groups
-        ))
-        self.update_min_max_stats(simulated_output)
-        quantized_simulated_output = self.quantize_output(
-            simulated_output)
+        with torch.no_grad():
+            fused_weight, fused_bias = self._get_fused_weight_and_bias(
+                input.dequantize()
+            )
+            quantized_fused_weight = self._quantize_weight(fused_weight)
+            quantized_fused_bias = self._quantize_bias(
+                input, quantized_fused_weight, fused_bias)
+            simulated_output = self._apply_activation(F.conv2d(
+                input.dequantize(), quantized_fused_weight.dequantize(),
+                quantized_fused_bias.dequantize(), self.conv2d.stride,
+                self.conv2d.padding, self.conv2d.dilation, self.conv2d.groups
+            ))
+            self.update_min_max_stats(simulated_output)
+            quantized_simulated_output = self.quantize_output(
+                simulated_output)
 
         real_output = self._apply_activation(
             self.bn2d(self.conv2d(input.dequantize())))
@@ -177,17 +178,18 @@ class QuantizedConv2dBatchNorm2dReLU(QuantizedOperator):
         return quantized_simulated_output
 
     def _activation_not_quantized_forward(self, input: torch.Tensor) -> torch.Tensor:
-        fused_weight, fused_bias = self._get_fused_weight_and_bias(
-            input
-        )
-        # quantize weight but not bias since bias quantization relies on a quantized input tensor
-        quantized_fused_weight = self._quantize_weight(fused_weight)
-        simulated_output = self._apply_activation(F.conv2d(
-            input, quantized_fused_weight.dequantize(),
-            fused_bias, self.conv2d.stride,
-            self.conv2d.padding, self.conv2d.dilation, self.conv2d.groups
-        ))
-        self.update_min_max_stats(simulated_output)
+        with torch.no_grad():
+            fused_weight, fused_bias = self._get_fused_weight_and_bias(
+                input
+            )
+            # quantize weight but not bias since bias quantization relies on a quantized input tensor
+            quantized_fused_weight = self._quantize_weight(fused_weight)
+            simulated_output = self._apply_activation(F.conv2d(
+                input, quantized_fused_weight.dequantize(),
+                fused_bias, self.conv2d.stride,
+                self.conv2d.padding, self.conv2d.dilation, self.conv2d.groups
+            ))
+            self.update_min_max_stats(simulated_output)
 
         real_output = self._apply_activation(self.bn2d(self.conv2d(input)))
         return real_output - (real_output - simulated_output).detach()
@@ -216,10 +218,12 @@ class QuantizedAdd(QuantizedOperator):
             assert isinstance(x, QuantizedTensor) and \
                 isinstance(y, QuantizedTensor)
 
-            simulated_output = self._rescale_x(x, y).dequantize() \
-                + y.dequantize()
-            self.update_min_max_stats(simulated_output)
-            quantized_simulated_output = self.quantize_output(simulated_output)
+            with torch.no_grad():
+                simulated_output = self._rescale_x(x, y).dequantize() \
+                    + y.dequantize()
+                self.update_min_max_stats(simulated_output)
+                quantized_simulated_output = self.quantize_output(
+                    simulated_output)
 
             real_output = x.dequantize() + y.dequantize()
             quantized_simulated_output.r = real_output - \
@@ -239,9 +243,10 @@ class QuantizedAdaptiveAvgPool2d(QuantizedOperator):
         self.output_size = output_size
 
     def _activation_quantized_forward(self, input: QuantizedTensor) -> QuantizedTensor:
-        q = F.adaptive_avg_pool2d(input.q.to(torch.float32), self.output_size) \
-            .round().to(torch.int8)
-        quantized_simulated_output = QuantizedTensor(q, input.s, input.z)
+        with torch.no_grad():
+            q = F.adaptive_avg_pool2d(input.q.to(torch.float32), self.output_size) \
+                .round().to(torch.int8)
+            quantized_simulated_output = QuantizedTensor(q, input.s, input.z)
         real_output = F.adaptive_avg_pool2d(
             input.dequantize(), self.output_size)
         quantized_simulated_output.r = real_output - \
@@ -266,9 +271,10 @@ class QuantizedMaxPool2d(QuantizedOperator):
         self.dilation = dilation
 
     def _activation_quantized_forward(self, input: QuantizedTensor) -> QuantizedTensor:
-        q = F.max_pool2d(input.q.to(torch.float32), self.kernel_size, self.stride,
-                         self.padding, self.dilation).round().to(torch.int8)
-        quantized_simulated_output = QuantizedTensor(q, input.s, input.z)
+        with torch.no_grad():
+            q = F.max_pool2d(input.q.to(torch.float32), self.kernel_size, self.stride,
+                             self.padding, self.dilation).round().to(torch.int8)
+            quantized_simulated_output = QuantizedTensor(q, input.s, input.z)
         real_output = F.max_pool2d(
             input.dequantize(), self.kernel_size, self.stride, self.padding, self.dilation)
         quantized_simulated_output.r = real_output - \
@@ -292,10 +298,11 @@ class QuantizedSoftmax(QuantizedOperator):
     def _activation_quantized_forward(self, input: QuantizedTensor) -> QuantizedTensor:
         # In the inference engine, this is done by fix-point arithmetic.
         simulated_output = F.softmax(input.dequantize(), dim=self.dim)
-        s = torch.tensor(1.0 / 256.0).to(simulated_output.device)
-        z = torch.tensor(-128).to(torch.int8).to(simulated_output.device)
-        q = (simulated_output / s + z).round().to(torch.int8)
-        quantized_simulated_output = QuantizedTensor(q, s, z)
+        with torch.no_grad():
+            s = torch.tensor(1.0 / 256.0).to(simulated_output.device)
+            z = torch.tensor(-128).to(torch.int8).to(simulated_output.device)
+            q = (simulated_output / s + z).round().to(torch.int8)
+            quantized_simulated_output = QuantizedTensor(q, s, z)
         r = simulated_output - (simulated_output -
                                 quantized_simulated_output.dequantize()).detach()
         quantized_simulated_output.r = r
@@ -316,8 +323,9 @@ class QuantizedReLU(QuantizedOperator):
 
     def _activation_quantized_forward(self, input: QuantizedTensor) -> QuantizedTensor:
         simulated_output = F.relu(input.dequantize())
-        self.update_min_max_stats(simulated_output)
-        quantized_simulated_output = self.quantize_output(simulated_output)
+        with torch.no_grad():
+            self.update_min_max_stats(simulated_output)
+            quantized_simulated_output = self.quantize_output(simulated_output)
         r = simulated_output - (simulated_output -
                                 quantized_simulated_output.dequantize()).detach()
         quantized_simulated_output.r = r
@@ -358,19 +366,20 @@ class QuantizedLinear(QuantizedOperator):
         return QuantizedTensor(q, s, z)
 
     def _activation_quantized_forward(self, input: QuantizedTensor) -> QuantizedTensor:
-        quantized_weight = self._quantize_weight(self.linear.weight)
+        with torch.no_grad():
+            quantized_weight = self._quantize_weight(self.linear.weight)
 
-        if self.linear.bias is not None:
-            quantized_bias = self._quantize_bias(
-                input, quantized_weight, self.linear.bias)
-            simulated_output = F.linear(input.dequantize(), quantized_weight.dequantize(),
-                                        quantized_bias.dequantize())
-        else:
-            simulated_output = F.linear(
-                input.dequantize(), quantized_weight.dequantize(), None)
+            if self.linear.bias is not None:
+                quantized_bias = self._quantize_bias(
+                    input, quantized_weight, self.linear.bias)
+                simulated_output = F.linear(input.dequantize(), quantized_weight.dequantize(),
+                                            quantized_bias.dequantize())
+            else:
+                simulated_output = F.linear(
+                    input.dequantize(), quantized_weight.dequantize(), None)
 
-        self.update_min_max_stats(simulated_output)
-        quantized_simulated_output = self.quantize_output(simulated_output)
+            self.update_min_max_stats(simulated_output)
+            quantized_simulated_output = self.quantize_output(simulated_output)
 
         real_output = self.linear(input.dequantize())
         quantized_simulated_output.r = real_output - \

@@ -13,6 +13,7 @@ class SwitchQuantizationModeHook(Hook):
     def after_train_iter(self, runner):
         if (runner.iter + 1) != 50000:
             return
+        runner.logger.info("switching to activation quantization")
         for module in runner.model.modules():
             if isinstance(module, QuantizedOperator):
                 module.activation_quantization = True

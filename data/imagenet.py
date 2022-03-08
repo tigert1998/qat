@@ -29,7 +29,7 @@ def get_dist_train_data_loader(rank, world_size, batch_size, root):
         transform=get_train_transform()
     )
     return DataLoader(
-        train_ds, batch_size, num_workers=4,
+        train_ds, batch_size, num_workers=6,
         sampler=DistributedSampler(train_ds, world_size, rank, shuffle=True)
     )
 
