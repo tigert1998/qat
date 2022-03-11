@@ -10,3 +10,15 @@ and nudge the float weights at the same time.
 Using different logic for forward and backward pass is done by the PyTorch `detach` operator.
 For example, `a - (a - b).detach()` will yield `b` in the forward pass.
 But the gradients will directly be passed to `a` and ignore `(a - b).detach()` in the backward pass.
+
+## Results
+
+The following are the quantization aware training results of ResNet-18 on ImageNet dataset.
+Floating point accuracy is directly copied from PyTorch official site.
+The QAT version of ResNet-18 is trained for 100 epochs from scratch with network structure defined in [networks/resnet.py](networks/resnet.py).
+The learning rate starts from 0.1 and decays by a factor of 0.1 every 30 epochs.
+We can see that the results basically reflect the ability of QAT.
+
+|ResNet-18 (F32)|ResNet-18 (INT8 QAT)|
+|-|-|
+|69.76%|68.82%|
