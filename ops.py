@@ -54,11 +54,15 @@ class QuantizedOperator(nn.Module):
                 max * self.momentum + self.running_max * (1 - self.momentum))
         self.num_batches_tracked.data.copy_(self.num_batches_tracked + 1)
 
-    def quantize_output(self, output: torch.Tensor):
-        assert self.num_batches_tracked >= 1
+    def calc_output_scale_and_zero_point(self):
         z = (127 - self.running_max * 255 /
              (self.running_max - self.running_min)).round().to(torch.int8)
         s = self.running_max / (127 - z.to(torch.float32))
+        return s, z
+
+    def quantize_output(self, output: torch.Tensor):
+        assert self.num_batches_tracked >= 1
+        s, z = self.calc_output_scale_and_zero_point()
         q = torch.maximum(torch.minimum(
             output / s + z, torch.tensor(127)), torch.tensor(-128)).round().to(torch.int8)
         return QuantizedTensor(q, s, z)
