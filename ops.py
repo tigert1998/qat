@@ -41,6 +41,9 @@ class QuantizedOperator(nn.Module):
             return
         min = output.min()
         max = output.max()
+        eps = torch.ones_like(min) * 1e-6
+        min = torch.minimum(-eps, min)
+        max = torch.maximum(eps, max)
         if self.num_batches_tracked == 0:
             self.running_min.data.copy_(min)
             self.running_max.data.copy_(max)
@@ -138,9 +141,10 @@ class QuantizedConv2dBatchNorm2dReLU(QuantizedOperator):
         weight_reshaped = weight.reshape(weight.shape[0], -1)
         a = weight_reshaped.min(dim=1).values
         b = weight_reshaped.max(dim=1).values
+        max_abs = torch.maximum(torch.abs(a), torch.abs(b))
 
         z = torch.zeros_like(a).to(torch.int8)
-        s = b / (127 - z.to(torch.float32))
+        s = max_abs / (127 - z.to(torch.float32))
         z = z.reshape(z.shape[0], 1, 1, 1)
         s = s.reshape(s.shape[0], 1, 1, 1)
 
@@ -351,9 +355,10 @@ class QuantizedLinear(QuantizedOperator):
         # Quantize weight to -127 ~ 127. Note that -128 is excluded.
         a = weight.min()
         b = weight.max()
+        max_abs = torch.maximum(torch.abs(a), torch.abs(b))
 
         z = torch.zeros_like(a).to(torch.int8)
-        s = b / (127 - z.to(torch.float32))
+        s = max_abs / (127 - z.to(torch.float32))
 
         q = torch.maximum(torch.minimum(
             weight / s + z, torch.tensor(127)), torch.tensor(-127)).round().to(torch.int8)
