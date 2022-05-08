@@ -251,3 +251,37 @@ class QLinearAddFn(torch.autograd.Function):
             output_zero_point,
             output_dtype):
         return torch.empty_like(int_a + int_b).to(output_dtype)
+
+
+class QLinearGlobalAveragePoolFn(torch.autograd.Function):
+    @staticmethod
+    def symbolic(
+            g, int_x,
+            input_scale,
+            input_zero_point,
+            output_scale,
+            output_zero_point,
+            output_dtype,
+            out_shape,
+            channels_last):
+        return g.op(
+            'com.microsoft::QLinearGlobalAveragePool',
+            int_x,
+            input_scale,
+            input_zero_point,
+            output_scale,
+            output_zero_point,
+            channels_last_i=channels_last
+        )
+
+    @staticmethod
+    def forward(
+            ctx, int_x,
+            input_scale,
+            input_zero_point,
+            output_scale,
+            output_zero_point,
+            output_dtype,
+            out_shape,
+            channels_last):
+        return torch.empty(out_shape, dtype=output_dtype)
