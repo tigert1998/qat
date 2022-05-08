@@ -3,6 +3,9 @@ import torch
 OPSET = 11
 AXIS_OPSET = 11
 
+# The following functions are from:
+# https://github.com/Xilinx/brevitas
+
 
 class QLinearConvFn(torch.autograd.Function):
     @staticmethod
@@ -137,3 +140,36 @@ class QuantizeLinearFn(torch.autograd.Function):
             output_dtype,
             output_axis):
         return x.type(output_dtype)
+
+# The following functions are written by Xiaohu.
+
+
+class QLinearLeakyReluFn(torch.autograd.Function):
+    @staticmethod
+    def symbolic(
+            g, int_x,
+            input_scale,
+            input_zero_point,
+            output_scale,
+            ouput_zero_point,
+            output_dtype,
+            alpha):
+        return g.op(
+            'com.microsoft::QLinearLeakyRelu', int_x,
+            input_scale,
+            input_zero_point,
+            output_scale,
+            ouput_zero_point,
+            alpha_f=alpha
+        )
+
+    @staticmethod
+    def forward(
+            ctx, int_x,
+            input_scale,
+            input_zero_point,
+            output_scale,
+            ouput_zero_point,
+            output_dtype,
+            alpha):
+        return torch.empty_like(int_x).to(output_dtype)
