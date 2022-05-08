@@ -285,3 +285,55 @@ class QLinearGlobalAveragePoolFn(torch.autograd.Function):
             out_shape,
             channels_last):
         return torch.empty(out_shape, dtype=output_dtype)
+
+
+class QGemmFn(torch.autograd.Function):
+    @staticmethod
+    def symbolic(
+            g, int_a,
+            a_scale,
+            a_zero_point,
+            int_b,
+            b_scale,
+            b_zero_point,
+            int_c,
+            output_scale,
+            output_zero_point,
+            output_dtype,
+            out_shape,
+            trans_a,
+            trans_b,
+            alpha):
+        return g.op(
+            'com.microsoft::QGemm',
+            int_a,
+            a_scale,
+            a_zero_point,
+            int_b,
+            b_scale,
+            b_zero_point,
+            int_c,
+            output_scale,
+            output_zero_point,
+            transA_i=trans_a,
+            transB_i=trans_b,
+            alpha_f=alpha
+        )
+
+    @staticmethod
+    def forward(
+            ctx, int_a,
+            a_scale,
+            a_zero_point,
+            int_b,
+            b_scale,
+            b_zero_point,
+            int_c,
+            output_scale,
+            output_zero_point,
+            output_dtype,
+            out_shape,
+            trans_a,
+            trans_b,
+            alpha):
+        return torch.empty(out_shape, dtype=output_dtype)
