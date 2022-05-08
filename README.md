@@ -22,3 +22,14 @@ We can see that the results basically reflect the ability of QAT.
 |ResNet-18 (F32)|ResNet-18 (INT8 QAT)|
 |-|-|
 |69.76%|68.82%|
+
+## Export to ONNX
+
+This repository supports exporting PyTorch training graph to ONNX format with one line code.
+This is completed by bridging PyTorch quantization module and ONNX operator with symbolic `autograd.Function`.
+The following is the one line code to export a training module to its int8 ONNX inference format.
+
+```python
+from export.export import export
+export(model, (torch.randn(1, 3, 224, 224),), "model.quant.onnx")
+```
