@@ -141,6 +141,46 @@ class QuantizeLinearFn(torch.autograd.Function):
             output_axis):
         return x.type(output_dtype)
 
+
+class QLinearMatMulFn(torch.autograd.Function):
+
+    @staticmethod
+    def symbolic(
+            g, int_x,
+            input_scale,
+            input_zero_point,
+            int_weight,
+            weight_scale,
+            weight_zero_point,
+            output_scale,
+            ouput_zero_point,
+            output_dtype,
+            out_shape):
+        ret = g.op(
+            'QLinearMatMul', int_x,
+            input_scale,
+            input_zero_point,
+            int_weight,
+            weight_scale,
+            weight_zero_point,
+            output_scale,
+            ouput_zero_point)
+        return ret
+
+    @staticmethod
+    def forward(
+            ctx, int_x,
+            input_scale,
+            input_zero_point,
+            int_weight,
+            weight_scale,
+            weight_zero_point,
+            output_scale,
+            output_zero_point,
+            output_dtype,
+            out_shape):
+        return torch.empty(out_shape, dtype=output_dtype, device=int_x.device)
+
 # The following functions are written by Xiaohu.
 
 
@@ -173,3 +213,41 @@ class QLinearLeakyReluFn(torch.autograd.Function):
             output_dtype,
             alpha):
         return torch.empty_like(int_x).to(output_dtype)
+
+
+class QLinearAddFn(torch.autograd.Function):
+    @staticmethod
+    def symbolic(
+            g, int_a,
+            a_scale,
+            a_zero_point,
+            int_b,
+            b_scale,
+            b_zero_point,
+            output_scale,
+            output_zero_point,
+            output_dtype):
+        return g.op(
+            'com.microsoft::QLinearAdd',
+            int_a,
+            a_scale,
+            a_zero_point,
+            int_b,
+            b_scale,
+            b_zero_point,
+            output_scale,
+            output_zero_point
+        )
+
+    @staticmethod
+    def forward(
+            ctx, int_a,
+            a_scale,
+            a_zero_point,
+            int_b,
+            b_scale,
+            b_zero_point,
+            output_scale,
+            output_zero_point,
+            output_dtype):
+        return torch.empty_like(int_a + int_b).to(output_dtype)
