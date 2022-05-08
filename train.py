@@ -33,8 +33,8 @@ def dist_train_build(rank, world_size, device_id, num_epochs, vars):
     test_data_loader = get_dist_test_data_loader(
         rank, world_size, vars["imgs_per_gpu"], vars["root"]
     )
-    lr_scheduler = torch.optim.lr_scheduler.StepLR(
-        optimizer, step_size=30 * len(train_data_loader), gamma=0.1
+    lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+        optimizer, T_max=num_epochs * len(train_data_loader)
     )
     return model, optimizer, lr_scheduler, train_data_loader, test_data_loader
 
@@ -49,7 +49,7 @@ if __name__ == "__main__":
     parser.add_argument("--imgs-per-gpu", default=32, type=int)
     parser.add_argument("--root")
     parser.add_argument("--lr", default=0.1, type=float)
-    parser.add_argument("--num-epochs", default=200, type=int)
+    parser.add_argument("--num-epochs", default=90, type=int)
     parser.add_argument("--work-dir")
     parser.add_argument("--device-ids", default="0,1,2,3")
     parser.add_argument("--num-procs", default=4, type=int)

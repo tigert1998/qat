@@ -298,33 +298,6 @@ class QuantizedMaxPool2d(QuantizedOperator):
             return F.max_pool2d(input, self.kernel_size, self.stride, self.padding, self.dilation)
 
 
-class QuantizedSoftmax(QuantizedOperator):
-    def __init__(self, dim: int) -> None:
-        super().__init__(0.1, None)
-        self.dim = dim
-
-    def _activation_quantized_forward(self, input: QuantizedTensor) -> QuantizedTensor:
-        # In the inference engine, this is done by fix-point arithmetic.
-        simulated_output = F.softmax(input.dequantize(), dim=self.dim)
-        with torch.no_grad():
-            s = torch.tensor(1.0 / 256.0).to(simulated_output.device)
-            z = torch.tensor(-128).to(torch.int8).to(simulated_output.device)
-            q = (simulated_output / s + z).round().to(torch.int8)
-            quantized_simulated_output = QuantizedTensor(q, s, z)
-        r = simulated_output - (simulated_output -
-                                quantized_simulated_output.dequantize()).detach()
-        quantized_simulated_output.r = r
-        return quantized_simulated_output
-
-    def forward(self, input):
-        if self.activation_quantization:
-            assert isinstance(input, QuantizedTensor)
-            return self._activation_quantized_forward(input)
-        else:
-            assert isinstance(input, torch.Tensor)
-            return F.softmax(input, dim=self.dim)
-
-
 class QuantizedReLU(QuantizedOperator):
     def __init__(self, momentum=0.1, device=None) -> None:
         super().__init__(momentum, device)
