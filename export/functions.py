@@ -1,6 +1,6 @@
 import torch
 
-OPSET = 11
+OPSET = 13
 AXIS_OPSET = 11
 
 # The following functions are from:
@@ -336,4 +336,40 @@ class QGemmFn(torch.autograd.Function):
             trans_a,
             trans_b,
             alpha):
+        return torch.empty(out_shape, dtype=output_dtype)
+
+
+class MaxPoolFn(torch.autograd.Function):
+    @staticmethod
+    def symbolic(
+            g, x,
+            out_shape,
+            output_dtype,
+            kernel_shape,
+            pads,
+            strides):
+        if isinstance(kernel_shape, int):
+            kernel_shape = (kernel_shape, kernel_shape)
+        if isinstance(pads, int):
+            pads = (pads, pads, pads, pads)
+        if strides is None:
+            strides = (1, 1)
+        if isinstance(strides, int):
+            strides = (strides, strides)
+        return g.op(
+            'MaxPool',
+            x,
+            kernel_shape_i=kernel_shape,
+            pads_i=pads,
+            strides_i=strides
+        )
+
+    @staticmethod
+    def forward(
+            g, x,
+            out_shape,
+            output_dtype,
+            kernel_shape,
+            pads,
+            strides):
         return torch.empty(out_shape, dtype=output_dtype)
