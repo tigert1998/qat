@@ -41,6 +41,8 @@ class QuantizedConv2dBatchNorm2dReLUHandler(Handler):
         quantized_weight = module._quantize_weight(weight)
         quantized_bias = module._quantize_bias(
             inputs[0], quantized_weight, bias)
+        padding = module.conv2d.padding
+        padding = (padding[0], padding[0], padding[1], padding[1])
         self.args[module] = OrderedDict({
             "input_scale": inputs[0].s.detach(),
             "input_zero_point": inputs[0].z,
@@ -53,7 +55,7 @@ class QuantizedConv2dBatchNorm2dReLUHandler(Handler):
             "int_bias": quantized_bias.q,
             "out_shape": tuple(outputs.q.shape),
             "kernel_size": module.conv2d.kernel_size,
-            "padding": module.conv2d.padding,
+            "padding": padding,
             "stride": module.conv2d.stride,
             "groups": module.conv2d.groups,
             "dilation": module.conv2d.dilation,
@@ -85,12 +87,12 @@ class QuantizedAddHandler(Handler):
     def forward_hook(self, module, inputs, outputs):
         s, z = module.calc_output_scale_and_zero_point()
         self.args[module] = {
-            "a_scale": inputs[0].s,
-            "a_zero_point": inputs[0].z,
-            "b_scale": inputs[1].s,
-            "b_zero_point": inputs[1].z,
-            "output_scale": s,
-            "output_zero_point": z,
+            "a_scale": torch.tensor(inputs[0].s.item()),
+            "a_zero_point": torch.tensor(inputs[0].z.item(), dtype=torch.int8),
+            "b_scale": torch.tensor(inputs[1].s.item()),
+            "b_zero_point": torch.tensor(inputs[1].z.item(), dtype=torch.int8),
+            "output_scale": torch.tensor(s.item()),
+            "output_zero_point": torch.tensor(z.item(), dtype=torch.int8),
             "output_dtype": torch.int8,
         }
 
@@ -128,12 +130,23 @@ class QuantizedAdaptiveAvgPool2dHandler(Handler):
 
 class QuantizedMaxPool2dHandler(Handler):
     def forward_hook(self, module, inputs, outputs):
+        kernel_shape = module.kernel_size
+        pads = module.padding
+        strides = module.stride
+        if isinstance(kernel_shape, int):
+            kernel_shape = (kernel_shape, kernel_shape)
+        if isinstance(pads, int):
+            pads = (pads, pads, pads, pads)
+        if strides is None:
+            strides = (1, 1)
+        elif isinstance(strides, int):
+            strides = (strides, strides)
         self.args[module] = OrderedDict({
             "out_shape": tuple(outputs.q.shape),
             "output_dtype": torch.int8,
-            "kernel_shape": module.kernel_size,
-            "pads": module.padding,
-            "strides": module.stride,
+            "kernel_shape": kernel_shape,
+            "pads": pads,
+            "strides": strides,
         })
         assert module.dilation == 1, module.dilation
 

@@ -348,14 +348,6 @@ class MaxPoolFn(torch.autograd.Function):
             kernel_shape,
             pads,
             strides):
-        if isinstance(kernel_shape, int):
-            kernel_shape = (kernel_shape, kernel_shape)
-        if isinstance(pads, int):
-            pads = (pads, pads, pads, pads)
-        if strides is None:
-            strides = (1, 1)
-        if isinstance(strides, int):
-            strides = (strides, strides)
         return g.op(
             'MaxPool',
             x,
