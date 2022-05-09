@@ -24,6 +24,16 @@ class QuantizedTensor:
             # prevent (q - z) from overflow
             return self.s * (self.q.to(torch.int32) - self.z)
 
+    def map(self, func):
+        return QuantizedTensor(
+            func(self.q),
+            self.s, self.z,
+            None if self.r is None else func(self.r)
+        )
+
+    def reshape(self, shape):
+        return self.map(lambda x: x.reshape(shape))
+
 
 class QuantizedOperator(nn.Module):
     def __init__(self, momentum=0.1, device=None) -> None:
