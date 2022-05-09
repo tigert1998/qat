@@ -2,9 +2,9 @@ import argparse
 
 import torch
 
-from networks.resnet import resnet18
-from networks.cnn_wrapper import CNNWrapper
-from ops import QuantizedOperator
+from qat.networks.resnet import resnet18
+from qat.networks.cnn_wrapper import CNNWrapper
+from qat.ops import QuantizedOperator
 from runner.train import dist_train
 from runner.hooks import TensorboardLoggerHook, CheckpointHook, Hook
 
@@ -20,7 +20,7 @@ class SwitchQuantizationModeHook(Hook):
 
 
 def dist_train_build(rank, world_size, device_id, num_epochs, vars):
-    from data.imagenet import get_dist_train_data_loader, get_dist_test_data_loader
+    from qat.data.imagenet import get_dist_train_data_loader, get_dist_test_data_loader
 
     device = f"cuda:{device_id}"
     model = CNNWrapper(resnet18(), device)

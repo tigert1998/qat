@@ -15,7 +15,7 @@ But the gradients will directly be passed to `a` and ignore `(a - b).detach()` i
 
 The following are the quantization aware training results of ResNet-18 on ImageNet dataset.
 Floating point accuracy is directly copied from PyTorch official site.
-The QAT version of ResNet-18 is trained for 100 epochs from scratch with network structure defined in [networks/resnet.py](networks/resnet.py).
+The QAT version of ResNet-18 is trained for 100 epochs from scratch with network structure defined in [qat/networks/resnet.py](qat/networks/resnet.py).
 The learning rate starts from 0.1 and decays by a factor of 0.1 every 30 epochs.
 We can see that the results basically reflect the ability of QAT.
 
@@ -30,6 +30,6 @@ This is completed by bridging PyTorch quantization module and ONNX operator with
 The following is the one line code to export a training module to its int8 ONNX inference format.
 
 ```python
-from export.export import export
+from qat.export.export import export
 export(model, (torch.randn(1, 3, 224, 224),), "model.quant.onnx")
 ```

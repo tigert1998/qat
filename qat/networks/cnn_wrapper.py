@@ -1,4 +1,4 @@
-from networks.image_classification_network import ImageClassificationNetwork
+from qat.networks.image_classification_network import ImageClassificationNetwork
 
 
 class CNNWrapper(ImageClassificationNetwork):

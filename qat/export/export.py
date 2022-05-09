@@ -3,8 +3,8 @@ from copy import deepcopy
 import torch
 import torch.nn as nn
 
-from export.handlers import *
-from ops import *
+from qat.export.handlers import *
+from qat.ops import *
 from .utils import *
 
 

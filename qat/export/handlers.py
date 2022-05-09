@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from export.functions import *
+from qat.export.functions import *
 
 
 class _WrapperModule(nn.Module):
