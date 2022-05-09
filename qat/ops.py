@@ -31,8 +31,11 @@ class QuantizedTensor:
             None if self.r is None else func(self.r)
         )
 
-    def reshape(self, shape):
-        return self.map(lambda x: x.reshape(shape))
+    def reshape(self, *shape):
+        return self.map(lambda x: x.reshape(*shape))
+
+    def permute(self, *permutation):
+        return self.map(lambda x: x.permute(*permutation))
 
     @property
     def shape(self):
