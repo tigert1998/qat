@@ -34,6 +34,10 @@ class QuantizedTensor:
     def reshape(self, shape):
         return self.map(lambda x: x.reshape(shape))
 
+    @property
+    def shape(self):
+        return self.q.shape
+
 
 class QuantizedOperator(nn.Module):
     def __init__(self, momentum=0.1, device=None) -> None:
