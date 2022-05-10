@@ -14,7 +14,7 @@ setuptools.setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/tigert1998/qat",
-    packages=["qat"],
+    packages=["qat", "qat.networks", "qat.data", "qat.export"],
     license='MIT',
     classifiers=[
         "Programming Language :: Python :: 3",
