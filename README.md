@@ -15,13 +15,13 @@ But the gradients will directly be passed to `a` and ignore `(a - b).detach()` i
 
 The following are the quantization aware training results of ResNet-18 on ImageNet dataset.
 Floating point accuracy is directly copied from PyTorch official site.
-The QAT version of ResNet-18 is trained for 100 epochs from scratch with network structure defined in [qat/networks/resnet.py](qat/networks/resnet.py).
-The learning rate starts from 0.1 and decays by a factor of 0.1 every 30 epochs.
+The QAT version of ResNet-18 is trained for 90 epochs from scratch with network structure defined in [qat/networks/resnet.py](qat/networks/resnet.py).
+The learning rate starts from 0.1 and decays with cosine annealing scheduler.
 We can see that the results basically reflect the ability of QAT.
 
 |ResNet-18 (F32)|ResNet-18 (INT8 QAT)|
 |-|-|
-|69.76%|68.82%|
+|69.76%|69.28%|
 
 ## Export to ONNX
 
