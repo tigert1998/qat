@@ -44,4 +44,4 @@ class ImageClassificationNetwork(nn.Module):
     def evaluate(preds: List[torch.Tensor], targets: List[torch.Tensor]) -> dict:
         preds = torch.cat(preds, 0)
         targets = torch.cat(targets, 0)
-        return evaluate_classification(preds.cpu().numpy(), targets.cpu().numpy())
+        return evaluate_classification(preds.detach().cpu().numpy(), targets.detach().cpu().numpy())
