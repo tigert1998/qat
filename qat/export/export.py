@@ -8,10 +8,19 @@ from qat.ops import *
 from .utils import *
 
 
-def export(model: nn.Module, args, f):
+def export(model: nn.Module, args, f, other_handlers=None):
     copyed_model = deepcopy(model)
 
     hooks = []
+
+    if other_handlers is None:
+        other_handlers = {}
+    else:
+        other_handlers = {
+            key: value()
+            for key, value in other_handlers.items()
+        }
+
     handlers = {
         Quantize: QuantizeHandler(),
         QuantizedConv2dBatchNorm2dReLU: QuantizedConv2dBatchNorm2dReLUHandler(),
@@ -21,6 +30,7 @@ def export(model: nn.Module, args, f):
         QuantizedMaxPool2d: QuantizedMaxPool2dHandler(),
         QuantizedLinear: QuantizedLinearHandler(),
         QuantizedFlatten: QuantizedFlattenHandler(),
+        **other_handlers
     }
 
     def _hook(module, inputs, outputs):
