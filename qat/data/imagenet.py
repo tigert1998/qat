@@ -23,22 +23,34 @@ def get_test_transform():
     ])
 
 
-def get_dist_train_data_loader(rank, world_size, batch_size, root):
-    train_ds = torchvision.datasets.ImageNet(
-        root=root, split='train',
-        transform=get_train_transform()
-    )
+def get_dist_train_data_loader(rank, world_size, batch_size, root, use_image_folder=True):
+    if use_image_folder:
+        train_ds = torchvision.datasets.ImageFolder(
+            root=f"{root}/train",
+            transform=get_train_transform()
+        )
+    else:
+        train_ds = torchvision.datasets.ImageNet(
+            root=root, split='train',
+            transform=get_train_transform()
+        )
     return DataLoader(
         train_ds, batch_size, num_workers=6,
         sampler=DistributedSampler(train_ds, world_size, rank, shuffle=True)
     )
 
 
-def get_dist_test_data_loader(rank, world_size, batch_size, root):
-    test_ds = torchvision.datasets.ImageNet(
-        root=root, split='val',
-        transform=get_test_transform()
-    )
+def get_dist_test_data_loader(rank, world_size, batch_size, root, use_image_folder=True):
+    if use_image_folder:
+        test_ds = torchvision.datasets.ImageFolder(
+            root=f'{root}/val',
+            transform=get_test_transform()
+        )
+    else:
+        test_ds = torchvision.datasets.ImageNet(
+            root=root, split='val',
+            transform=get_test_transform()
+        )
     return DataLoader(
         test_ds, batch_size, num_workers=4,
         sampler=DistributedSampler(test_ds, world_size, rank, shuffle=False)
