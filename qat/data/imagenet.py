@@ -35,7 +35,7 @@ def get_dist_train_data_loader(rank, world_size, batch_size, root, use_image_fol
             transform=get_train_transform()
         )
     return DataLoader(
-        train_ds, batch_size, num_workers=16,
+        train_ds, batch_size, num_workers=32,
         sampler=DistributedSampler(train_ds, world_size, rank, shuffle=True)
     )
 
