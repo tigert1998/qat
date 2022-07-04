@@ -18,6 +18,8 @@ def replace_module_by_name(module: nn.Module, name: str, replace: nn.Module):
 
 
 def fetch_module_by_name(module: nn.Module, name: str):
+    if name == "":
+        return module
     for name in name.split('.'):
         try:
             idx = int(name)
