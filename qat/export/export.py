@@ -8,7 +8,7 @@ from qat.ops import *
 from .utils import *
 
 
-def export(model: nn.Module, args, f, other_handlers=None):
+def _get_model_to_export(model: nn.Module, args, other_handlers=None):
     copyed_model = deepcopy(model)
 
     hooks = []
@@ -58,4 +58,9 @@ def export(model: nn.Module, args, f, other_handlers=None):
     for name, new_module in new_modules.items():
         replace_module_by_name(copyed_model, name, new_module)
 
+    return copyed_model
+
+
+def export(model: nn.Module, args, f, other_handlers=None):
+    copyed_model = _get_model_to_export(model, args, other_handlers)
     torch.onnx.export(copyed_model, args, f, opset_version=OPSET)
