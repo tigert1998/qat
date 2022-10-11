@@ -37,11 +37,11 @@ class QLinearConvFn(torch.autograd.Function):
                 output_scale,
                 ouput_zero_point,
                 int_bias,
-                kernel_shape_i=kernel_size,
-                pads_i=padding,
-                strides_i=stride,
-                group_i=groups,
-                dilations_i=dilation)
+                kernel_shape_i=kernel_size.tolist(),
+                pads_i=padding.tolist(),
+                strides_i=stride.tolist(),
+                group_i=groups.tolist(),
+                dilations_i=dilation.tolist())
         else:
             ret = g.op(
                 'QLinearConv', int_x,
@@ -52,11 +52,11 @@ class QLinearConvFn(torch.autograd.Function):
                 weight_zero_point,
                 output_scale,
                 ouput_zero_point,
-                kernel_shape_i=kernel_size,
-                pads_i=padding,
-                strides_i=stride,
-                group_i=groups,
-                dilations_i=dilation)
+                kernel_shape_i=kernel_size.tolist(),
+                pads_i=padding.tolist(),
+                strides_i=stride.tolist(),
+                group_i=groups.tolist(),
+                dilations_i=dilation.tolist())
         return ret
 
     @staticmethod
@@ -77,7 +77,7 @@ class QLinearConvFn(torch.autograd.Function):
             stride,
             groups,
             dilation):
-        return torch.empty(out_shape, dtype=output_dtype, device=int_x.device)
+        return torch.empty(out_shape.tolist(), dtype=output_dtype, device=int_x.device)
 
 
 class DequantizeLinearFn(torch.autograd.Function):

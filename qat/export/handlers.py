@@ -53,12 +53,12 @@ class QuantizedConv2dBatchNorm2dReLUHandler(Handler):
             "output_zero_point": z,
             "output_dtype": torch.int8,
             "int_bias": quantized_bias.q,
-            "out_shape": tuple(outputs.q.shape),
-            "kernel_size": module.conv2d.kernel_size,
-            "padding": padding,
-            "stride": module.conv2d.stride,
-            "groups": module.conv2d.groups,
-            "dilation": module.conv2d.dilation,
+            "out_shape": torch.tensor(tuple(outputs.q.shape)),
+            "kernel_size": torch.tensor(module.conv2d.kernel_size),
+            "padding": torch.tensor(padding),
+            "stride": torch.tensor(module.conv2d.stride),
+            "groups": torch.tensor(module.conv2d.groups),
+            "dilation": torch.tensor(module.conv2d.dilation),
         })
         assert z == -128 or module.activation is None, \
             f"{module.running_min}, {module.running_max}"
