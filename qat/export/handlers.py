@@ -142,11 +142,11 @@ class QuantizedMaxPool2dHandler(Handler):
         elif isinstance(strides, int):
             strides = (strides, strides)
         self.args[module] = OrderedDict({
-            "out_shape": tuple(outputs.q.shape),
+            "out_shape": torch.tensor(tuple(outputs.q.shape)),
             "output_dtype": torch.int8,
-            "kernel_shape": kernel_shape,
-            "pads": pads,
-            "strides": strides,
+            "kernel_shape": torch.tensor(kernel_shape),
+            "pads": torch.tensor(pads),
+            "strides": torch.tensor(strides),
         })
         assert module.dilation == 1, module.dilation
 

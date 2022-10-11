@@ -351,9 +351,9 @@ class MaxPoolFn(torch.autograd.Function):
         return g.op(
             'MaxPool',
             x,
-            kernel_shape_i=kernel_shape,
-            pads_i=pads,
-            strides_i=strides
+            kernel_shape_i=kernel_shape.tolist(),
+            pads_i=pads.tolist(),
+            strides_i=strides.tolist()
         )
 
     @staticmethod
@@ -364,4 +364,4 @@ class MaxPoolFn(torch.autograd.Function):
             kernel_shape,
             pads,
             strides):
-        return torch.empty(out_shape, dtype=output_dtype)
+        return torch.empty(out_shape.tolist(), dtype=output_dtype)
