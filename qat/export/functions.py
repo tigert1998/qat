@@ -284,7 +284,7 @@ class QLinearGlobalAveragePoolFn(torch.autograd.Function):
             output_dtype,
             out_shape,
             channels_last):
-        return torch.empty(out_shape, dtype=output_dtype)
+        return torch.empty(out_shape.tolist(), dtype=output_dtype)
 
 
 class QGemmFn(torch.autograd.Function):
@@ -336,7 +336,7 @@ class QGemmFn(torch.autograd.Function):
             trans_a,
             trans_b,
             alpha):
-        return torch.empty(out_shape, dtype=output_dtype)
+        return torch.empty(out_shape.tolist(), dtype=output_dtype)
 
 
 class MaxPoolFn(torch.autograd.Function):

@@ -119,7 +119,7 @@ class QuantizedAdaptiveAvgPool2dHandler(Handler):
             "output_scale": outputs.s,
             "output_zero_point": outputs.z,
             "output_dtype": torch.int8,
-            "out_shape": tuple(outputs.q.shape),
+            "out_shape": torch.tensor(tuple(outputs.q.shape)),
             "channels_last": 0,
         })
         assert module.output_size == (1, 1)
@@ -170,7 +170,7 @@ class QuantizedLinearHandler(Handler):
             "output_scale": outputs.s.detach(),
             "output_zero_point": outputs.z,
             "output_dtype": torch.int8,
-            "out_shape": tuple(outputs.q.shape),
+            "out_shape": torch.tensor(tuple(outputs.q.shape)),
             "trans_a": 0,
             "trans_b": 1,
             "alpha": 1,
