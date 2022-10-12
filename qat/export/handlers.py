@@ -183,28 +183,9 @@ class QuantizedLinearHandler(Handler):
 class QuantizedFlattenHandler(Handler):
     def forward_hook(self, module, inputs, outputs):
         self.args[module] = {
-            "dequant": OrderedDict({
-                "input_scale": inputs[0].s,
-                "input_zero_point": inputs[0].z,
-                "input_axis": None
-            }),
-            "flatten": {
-                "start_dim": module.start_dim,
-                "end_dim": module.end_dim,
-            },
-            "quant": OrderedDict({
-                "output_scale": inputs[0].s,
-                "output_zero_point": inputs[0].z,
-                "output_dtype": torch.int8,
-                "output_axis": None
-            })
+            "start_dim": module.start_dim,
+            "end_dim": module.end_dim,
         }
 
     def replace_module(self, module):
-        return nn.Sequential(
-            _WrapperModule(
-                lambda x: DequantizeLinearFn.apply(x, *self.args[module]["dequant"].values())),
-            nn.Flatten(**self.args[module]["flatten"]),
-            _WrapperModule(
-                lambda x: QuantizeLinearFn.apply(x, *self.args[module]["quant"].values()))
-        )
+        return nn.Flatten(**self.args[module])
